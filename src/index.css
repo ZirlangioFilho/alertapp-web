@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  /* App main (Report, Menu, BlockVictim, etc.) */
+  --color-primary: #092630;
+  --color-white: #fff;
+  --color-gray: #eaeaea;
+  --color-dark-gray: #b0b0b0;
+  --color-red: #ff0f35;
+  /* Login/SignUp (devices/colors) */
+  --color-brand: #3D737F;
+}
+
+html {
+  overflow-x: hidden;
+}
+
+body, html {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: lato, sans-serif;
+  min-height: 100%;
+}
+
+#root {
+  min-height: 100%;
+  overflow-x: hidden;
+}
