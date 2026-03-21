@@ -8,9 +8,11 @@ import { AnimatePresence, motion } from "framer-motion"
 type MenuProps = {
   active: ButtonType;
   setActive: (active: ButtonType) => void;
+  /** Nome do policial logado (apenas o nome, sem cargo). */
+  officerName?: string;
 }
 
-export const Menu = ({ active, setActive }: MenuProps) => {
+export const Menu = ({ active, setActive, officerName = "" }: MenuProps) => {
   const [exit, setExit] = useState(true)
 
   const navigate = useNavigate()
@@ -30,13 +32,13 @@ export const Menu = ({ active, setActive }: MenuProps) => {
   return (
     <>
       {/* Mobile: barra no topo */}
-      <div className="md:hidden w-full bg-primary py-3 px-3 flex flex-col gap-3 flex-shrink-0">
+      <div className="md:hidden h-full w-full bg-[#14233b] py-3 px-3 flex flex-col gap-3 shrink-0">
         <div className="flex items-center justify-between">
           <img src={Logo} alt="Logo" className="w-16 h-auto" />
           <button
             type="button"
             onClick={handleReport}
-            className="border-none bg-white text-sm py-1.5 px-2 rounded-lg text-black font-bold"
+            className="border-none bg-[#1e4ecb] text-sm py-2 px-3 rounded-lg text-white font-semibold"
           >
             Relatório
           </button>
@@ -48,8 +50,8 @@ export const Menu = ({ active, setActive }: MenuProps) => {
               key={button}
               type="button"
               onClick={() => setActive(button as ButtonType)}
-              className={`border-none text-left bg-transparent text-sm cursor-pointer py-1 px-2 rounded ${
-                active === button ? 'font-bold text-white bg-white/20' : 'text-dark-gray'
+              className={`border-none text-left bg-transparent text-sm cursor-pointer py-2 px-2 rounded-lg transition-colors ${
+                active === button ? 'font-semibold text-white bg-white/14' : 'text-[#9aa4b2]'
               }`}
             >
               {button}
@@ -68,7 +70,7 @@ export const Menu = ({ active, setActive }: MenuProps) => {
                 <button
                   type="button"
                   onClick={() => handleToConfirm()}
-                  className="text-sm bg-red text-gray border-none py-1 px-2 rounded font-bold hover:bg-gray hover:text-red"
+                  className="text-sm bg-[#f24858] text-white border-none py-1.5 px-3 rounded-lg font-semibold"
                 >
                   Sair
                 </button>
@@ -91,32 +93,34 @@ export const Menu = ({ active, setActive }: MenuProps) => {
       </div>
 
       {/* Desktop: sidebar */}
-      <div className="hidden md:flex bg-primary py-6 px-3 w-1/5 min-w-[180px] max-w-[240px] h-screen flex-col justify-between items-start flex-shrink-0">
+      <div className="hidden md:flex bg-[#14233b] py-8 px-4 w-[250px] min-w-[240px] h-screen flex-col justify-between items-start shrink-0">
         <div className="w-full">
-          <img src={Logo} alt="Logo" className="py-6 pt-0 w-[100px] h-auto block" />
-          <div className="flex flex-col gap-6 items-start">
+          <img src={Logo} alt="Logo" className="pt-0 w-[110px] h-auto block mb-10" />
+          <p className="text-[11px] uppercase tracking-wide text-[#9aa4b2] font-semibold mb-3 px-2">Principal</p>
+          <div className="flex flex-col gap-2 items-start">
             {Buttons.map((button) => (
               <button
                 key={button}
                 type="button"
                 onClick={() => setActive(button as ButtonType)}
-                className={`border-none text-left bg-transparent text-base cursor-pointer transition-colors duration-300 w-full ${
-                  active === button ? 'font-bold text-white' : 'font-normal text-dark-gray'
+                className={`border-none text-left bg-transparent text-sm cursor-pointer transition-colors duration-300 w-full px-3 py-3 rounded-lg flex items-center gap-2 ${
+                  active === button ? 'font-semibold text-white bg-white/12 border-l-4 border-[#2f66e4]' : 'font-normal text-[#9aa4b2]'
                 }`}
               >
+                <span className={active === button ? 'text-[#8eb0ff]' : 'text-[#7f8896]'}>{button === "Relato de problemas" ? "▣" : "△"}</span>
                 {button}
               </button>
             ))}
             <button
               type="button"
               onClick={handleReport}
-              className="border-none bg-white text-base cursor-pointer py-2 px-3 text-black font-bold rounded-lg"
+              className="border-none bg-[#1e4ecb] text-sm cursor-pointer py-3 px-3 text-white font-semibold rounded-lg mt-3 w-full"
             >
               Relatório
             </button>
           </div>
         </div>
-        <div className="flex py-16 px-3 items-center justify-center w-full">
+        <div className="flex p-3 items-center justify-center w-full">
           <AnimatePresence mode="wait">
             {exit ? (
               <motion.div
@@ -126,13 +130,21 @@ export const Menu = ({ active, setActive }: MenuProps) => {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <button
-                  type="button"
-                  onClick={() => handleToConfirm()}
-                  className="text-lg bg-red text-gray border-none py-1 px-3 rounded-md font-bold cursor-pointer hover:bg-gray hover:text-red"
-                >
-                  Sair
-                </button>
+                <div className="w-full bg-[#1c2c47] rounded-xl p-3 border border-white/10">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-[#3c82f6]" />
+                    <p className="text-xs text-white font-semibold truncate max-w-[160px]" title={officerName}>
+                      {officerName || "—"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleToConfirm()}
+                    className="text-xs bg-[#f24858] text-white border-none py-2 px-4 rounded-lg font-semibold cursor-pointer w-full"
+                  >
+                    Sair
+                  </button>
+                </div>
               </motion.div>
             ) : (
               <motion.div

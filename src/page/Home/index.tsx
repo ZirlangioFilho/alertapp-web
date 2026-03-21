@@ -1,16 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Menu } from "../../components/Menu";
 import { BlockVictim } from "../../components/BlockVictim";
 import type { ButtonType } from "../../constants/buttons";
 import { subscribeReports, type ReportItem } from "../../services/reportService";
 import PopUp from "../../components/PopUp";
+import { useOfficerDisplayName } from "../../hooks/useOfficerDisplayName";
+import {
+  matchesCreatedAtFilters,
+  matchesTextTokens,
+  parseSearchQuery,
+} from "../../utils/reportFilters";
 
 export const Home = () => {
   const [active, setActive] = useState<ButtonType>("Violência doméstica");
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hiddenReportIds, setHiddenReportIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const officerName = useOfficerDisplayName();
+
+  const searchParsed = useMemo(() => parseSearchQuery(searchQuery), [searchQuery]);
 
   useEffect(() => {
     const unsubscribe = subscribeReports((reports) => {
@@ -21,31 +32,101 @@ export const Home = () => {
     return () => unsubscribe();
   }, []);
 
-  const filteredReports = reports.filter((report) => report.category === active);
+  useEffect(() => {
+    const stored = localStorage.getItem("home-hidden-report-ids");
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        setHiddenReportIds(parsed.filter((v): v is string => typeof v === "string"));
+      }
+    } catch {
+      setHiddenReportIds([]);
+    }
+  }, []);
+
+  const filteredReports = useMemo(() => {
+    return reports.filter((item) => {
+      if (item.category !== active) return false;
+      if (hiddenReportIds.includes(item.id)) return false;
+      if (!matchesCreatedAtFilters(item, searchParsed.day, searchParsed.month, searchParsed.year)) {
+        return false;
+      }
+      if (!matchesTextTokens(item, searchParsed.textTokens)) return false;
+      return true;
+    });
+  }, [reports, active, hiddenReportIds, searchParsed]);
 
   const openPopUp = (report: ReportItem) => {
-    setSelectedReport(report);
+    setSelectedReportId(report.id);
   };
 
   const closePopUp = () => {
-    setSelectedReport(null);
+    setSelectedReportId(null);
   };
 
+  const handleConcludeReport = (id: string) => {
+    setHiddenReportIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const next = [...prev, id];
+      localStorage.setItem("home-hidden-report-ids", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const selectedReport = useMemo(
+    () => reports.find((item) => item.id === selectedReportId) ?? null,
+    [reports, selectedReportId]
+  );
+
   return (
-    <section className="w-full min-h-screen flex flex-col md:flex-row overflow-x-hidden">
-      <Menu active={active} setActive={setActive} />
-      <div className="flex flex-1 flex-col items-center gap-4 overflow-y-auto overflow-x-hidden min-h-0 p-4 bg-gray w-full md:w-[80%]">
+    <section className="w-full min-h-screen flex flex-col md:flex-row overflow-x-hidden bg-[#eef1f6]">
+      <Menu active={active} setActive={setActive} officerName={officerName} />
+      <div className="flex flex-1 flex-col items-center gap-4 overflow-y-auto overflow-x-hidden min-h-0 p-4 md:p-8 w-full">
+        <div className="w-full max-w-[1080px] flex flex-col gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="flex items-center bg-white rounded-xl border border-[#d7dce5] px-3 w-full shadow-sm flex-1 min-w-0">
+              <span className="text-[#7e8aa0] mr-2 shrink-0">🔍</span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar: palavras (ex: tratos), dia (15), data 15/03/2026 ou 15 maus tratos"
+                className="flex-1 min-w-0 py-3 px-0 text-sm md:text-base bg-transparent outline-none"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-[#64748b] px-1">
+            Busca no <strong>texto do relato</strong>, <strong>nome</strong> e <strong>endereço</strong>. Número
+            inicial 1–31 filtra pelo <strong>dia do mês</strong> (relatos com data de registro).
+          </p>
+        </div>
         {loading ? (
-          <div className="py-8">Carregando...</div>
+          <div className="py-8 text-[#1b365d] font-semibold">Carregando...</div>
+        ) : filteredReports.length === 0 ? (
+          <div className="py-12 px-4 text-center max-w-lg rounded-2xl border border-dashed border-[#cbd5e1] bg-white/80">
+            <p className="text-[#334155] font-medium">Nenhum relato encontrado com os filtros atuais.</p>
+            <p className="text-sm text-[#64748b] mt-2">
+              Tente outras palavras na busca ou confira a aba de categoria no menu. Relatos sem data de
+              registro não entram em filtros por dia.
+            </p>
+          </div>
         ) : (
           filteredReports.map((item) => (
             <BlockVictim
+              id={item.id}
               onClick={() => openPopUp(item)}
+              onConclude={handleConcludeReport}
               key={item.id}
               name={item.name}
               category={item.category}
               report={item.report}
               address={item.address}
+              latitude={item.latitude}
+              longitude={item.longitude}
+              locationUpdatesActive={item.locationUpdatesActive}
+              locationStoppedAt={item.locationStoppedAt}
+              createdAt={item.createdAt}
             />
           ))
         )}

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from 'react-router-dom'
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../firebase";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { auth, db } from "../../firebase";
+import { doc, getDoc } from "firebase/firestore";
 import Title from "../Title";
 
 const BlockLogin = () => {
@@ -14,6 +15,17 @@ const BlockLogin = () => {
   const handleLogin = async () => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+      const profileSnap = await getDoc(doc(db, "users", uid));
+      const role = profileSnap.exists() ? profileSnap.data().role : null;
+
+      if (role !== "police") {
+        await signOut(auth);
+        localStorage.removeItem("token");
+        setError("Acesso negado. Este login não possui permissão para o painel policial.");
+        return;
+      }
+
       const token = await userCredential.user.getIdToken();
       localStorage.setItem('token', token);
       setError("");
@@ -29,20 +41,20 @@ const BlockLogin = () => {
       <input
         placeholder="Email"
         value={email}
-        className="w-full text-base py-3 px-3 rounded-lg border-none bg-gray focus:bg-red focus:outline-none min-w-0"
+        className="w-full text-base py-3 px-3 rounded-lg border border-[#d6dce8] bg-white focus:outline-none min-w-0"
         onChange={(e) => setEmail(e.target.value)}
       />
       <input
         placeholder="Senha"
         type="password"
         value={password}
-        className="w-full text-base py-3 px-3 rounded-lg border-none bg-gray focus:bg-red focus:outline-none min-w-0"
+        className="w-full text-base py-3 px-3 rounded-lg border border-[#d6dce8] bg-white focus:outline-none min-w-0"
         onChange={(e) => setPassword(e.target.value)}
       />
       <button
         type="button"
         onClick={() => handleLogin()}
-        className="w-full py-3 px-3 rounded-lg text-base md:text-lg font-bold border-none bg-brand text-white cursor-pointer hover:bg-black transition-colors"
+        className="w-full py-3 px-3 rounded-lg text-base font-semibold border-none bg-[#1e4ecb] text-white cursor-pointer transition-colors"
       >
         Entrar
       </button>

@@ -9,6 +9,8 @@ export type ReportItem = {
   category: ButtonType;
   report: string;
   address: string;
+  /** Data de criação do relato (para filtros por dia/mês/ano) */
+  createdAt?: Date | null;
   latitude?: number | null;
   longitude?: number | null;
   /** true = usuário ainda está enviando localização; false ou undefined = parou ou nunca enviou em tempo real */
@@ -38,9 +40,10 @@ export function subscribeReports(
         category: data.category,
         report: data.report,
         address: data.address,
+        createdAt: parseTimestamp(data.createdAt),
         latitude: data.latitude ?? null,
         longitude: data.longitude ?? null,
-        locationUpdatesActive: data.locationUpdatesActive ?? false,
+        locationUpdatesActive: data.locationUpdatesActive === true,
         locationStoppedAt: parseTimestamp(data.locationStoppedAt),
       });
     });
