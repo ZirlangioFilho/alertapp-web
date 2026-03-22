@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { signOut } from 'firebase/auth'
 import Logo from '../../assets/logo.svg'
 import { Buttons, type ButtonType } from '../../constants/buttons'
 import { useNavigate } from 'react-router-dom'
+import { auth } from '../../firebase'
 import ExitConfirm from '../ExitConfirm'
 import { AnimatePresence, motion } from "framer-motion"
 
@@ -17,7 +19,12 @@ export const Menu = ({ active, setActive, officerName = "" }: MenuProps) => {
 
   const navigate = useNavigate()
 
-  function handleToLogin() {
+  async function handleToLogin() {
+    try {
+      await signOut(auth)
+    } catch {
+      /* ignore */
+    }
     localStorage.removeItem("token")
     navigate("/login")
   }
@@ -31,8 +38,8 @@ export const Menu = ({ active, setActive, officerName = "" }: MenuProps) => {
 
   return (
     <>
-      {/* Mobile: barra no topo */}
-      <div className="md:hidden h-full w-full bg-[#14233b] py-3 px-3 flex flex-col gap-3 shrink-0">
+      {/* Mobile: barra no topo (fixa no fluxo; o scroll é só na coluna ao lado) */}
+      <div className="flex w-full shrink-0 flex-col gap-3 bg-[#14233b] px-3 py-3 md:hidden">
         <div className="flex items-center justify-between">
           <img src={Logo} alt="Logo" className="w-16 h-auto" />
           <button
@@ -92,8 +99,8 @@ export const Menu = ({ active, setActive, officerName = "" }: MenuProps) => {
         </div>
       </div>
 
-      {/* Desktop: sidebar */}
-      <div className="hidden md:flex bg-[#14233b] py-8 px-4 w-[250px] min-w-[240px] h-screen flex-col justify-between items-start shrink-0">
+      {/* Desktop: sidebar — altura = viewport; lista de relatos rola na coluna ao lado */}
+      <div className="hidden h-full min-h-0 w-[250px] min-w-[240px] shrink-0 flex-col items-start justify-between bg-[#14233b] px-4 py-8 md:flex">
         <div className="w-full">
           <img src={Logo} alt="Logo" className="pt-0 w-[110px] h-auto block mb-10" />
           <p className="text-[11px] uppercase tracking-wide text-[#9aa4b2] font-semibold mb-3 px-2">Principal</p>
@@ -129,6 +136,7 @@ export const Menu = ({ active, setActive, officerName = "" }: MenuProps) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
+                className='w-full'
               >
                 <div className="w-full bg-[#1c2c47] rounded-xl p-3 border border-white/10">
                   <div className="flex items-center gap-2 mb-3">
@@ -153,6 +161,7 @@ export const Menu = ({ active, setActive, officerName = "" }: MenuProps) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
+                className='w-full'
               >
                 <ExitConfirm
                   exit={() => handleToLogin()}

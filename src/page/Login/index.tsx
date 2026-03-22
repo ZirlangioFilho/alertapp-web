@@ -1,14 +1,9 @@
-import { useEffect } from "react";
 import BlockLogin from "../../components/BlockLogin";
 
 import LogoDark from '../../assets/logo-dark.svg';
 import Background from '../../assets/fundo-login.svg';
 
 export default function Login() {
-  useEffect(() => {
-    localStorage.removeItem('token');
-  }, []);
-
   return (
     <section
       className="w-full min-h-screen flex flex-col md:flex-row md:items-center md:justify-end bg-primary overflow-x-hidden"

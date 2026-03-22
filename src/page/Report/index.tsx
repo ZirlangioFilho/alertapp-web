@@ -12,6 +12,8 @@ import {
   matchesTextTokens,
   parseSearchQuery,
 } from "../../utils/reportFilters";
+const ITEMS_PER_PAGE = 10;
+
 function categoryMatches(filter: ReportCategoryFilter, item: ReportItem): boolean {
   if (filter === "todos") return true;
   if (filter === "Sos") return item.category === "Violência doméstica";
@@ -31,6 +33,7 @@ export default function Report() {
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
   const navigate = useNavigate();
 
@@ -57,16 +60,18 @@ export default function Report() {
       if (!matchesTextTokens(item, searchParsed.textTokens)) return false;
       return true;
     });
-  }, [
-    reports,
-    categoryFilter,
-    searchParsed,
-    day,
-    month,
-    year,
-    filterName,
-    filterAddress,
-  ]);
+  }, [reports, categoryFilter, searchParsed, day, month, year, filterName, filterAddress]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredReports.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paginatedReports = useMemo(() => {
+    const start = safePage * ITEMS_PER_PAGE;
+    return filteredReports.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredReports, safePage]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [categoryFilter, searchParsed, day, month, year, filterName, filterAddress, reportSearch]);
 
   const openPopUp = (report: ReportItem) => {
     setSelectedReportId(report.id);
@@ -105,11 +110,11 @@ export default function Report() {
     categoryFilter !== "todos";
 
   return (
-    <section className="w-full min-h-screen flex flex-col overflow-x-hidden bg-[#eeff6]">
+    <section className="flex min-h-screen w-full flex-col overflow-x-hidden bg-[#eef1f6]">
       <SearchReport
         report={reportSearch}
         reportChange={setReportSearch}
-        placeholder="Buscar por palavras no relato (ex: tratos), dia (ex: 15), data 15/03/2026 ou combinar: 15 maus tratos"
+        placeholder="Buscar por palavras no relato (ex: agressão)"
       />
 
       <div className="flex shrink-0 px-4 md:px-8 pb-3 pt-2 items-center justify-between gap-3 flex-wrap">
@@ -120,19 +125,13 @@ export default function Report() {
         >
           ← Voltar à tela inicial
         </button>
-        <p className="text-xs text-[#64748b] max-w-xl">
-          A busca considera o texto do relato, nome e endereço. Use números para filtrar por{" "}
-          <strong>dia do mês</strong> (quando o relato tiver data de registro) ou formato{" "}
-          <strong>DD/MM/AAAA</strong>.
-        </p>
       </div>
 
       <div className="flex flex-col lg:flex-row lg:justify-center gap-5 lg:gap-8 px-4 pb-8 md:px-8 flex-1 min-h-0 overflow-hidden">
-        <aside className="flex flex-col gap-4 shrink-0 w-full lg:w-[300px] bg-white border border-[#dce1ea] rounded-2xl p-5 h-fit shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
+        <aside className="flex flex-col gap-2 shrink-0 w-full lg:w-[300px] bg-white border border-[#dce1ea] rounded-2xl p-5 h-fit shadow-[0_8px_30px_rgba(15,23,42,0.06)]">
           <div className="flex items-center justify-between gap-2">
             <div>
               <h3 className="text-[#0f172a] font-bold text-lg">Filtros</h3>
-              <p className="text-xs text-[#64748b] mt-0.5">Refine os relatos em tempo real</p>
             </div>
           </div>
           <div className="h-px bg-linear-to-r from-transparent via-[#e2e8f0] to-transparent w-full" />
@@ -187,20 +186,47 @@ export default function Report() {
               </p>
             </div>
           ) : (
-            <ul className="flex flex-col gap-3 list-none p-0 m-0">
-              {filteredReports.map((item) => (
-                <li key={item.id}>
-                  <BlockVictimReport
-                    name={item.name}
-                    category={item.category}
-                    report={item.report}
-                    address={item.address}
-                    createdAt={item.createdAt}
-                    onClick={() => openPopUp(item)}
-                  />
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="flex flex-col gap-3 list-none p-0 m-0">
+                {paginatedReports.map((item) => (
+                  <li key={item.id}>
+                    <BlockVictimReport
+                      name={item.name}
+                      category={item.category}
+                      report={item.report}
+                      address={item.address}
+                      createdAt={item.createdAt}
+                      concludedAt={item.concludedAt}
+                      concludedByOfficerName={item.concludedByOfficerName}
+                      onClick={() => openPopUp(item)}
+                    />
+                  </li>
+                ))}
+              </ul>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 mt-6 pt-4 border-t border-[#e2e8f0]">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={safePage === 0}
+                    className="px-4 py-2 rounded-xl font-semibold text-sm bg-[#1e4ecb] text-white hover:bg-[#1a45b8] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#1e4ecb] transition-colors"
+                  >
+                    ← Anterior
+                  </button>
+                  <span className="text-sm text-[#64748b] font-medium">
+                    Página {safePage + 1} de {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={safePage >= totalPages - 1}
+                    className="px-4 py-2 rounded-xl font-semibold text-sm bg-[#1e4ecb] text-white hover:bg-[#1a45b8] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#1e4ecb] transition-colors"
+                  >
+                    Próximo →
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

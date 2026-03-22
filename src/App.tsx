@@ -1,11 +1,13 @@
-// import { Home } from "./page/Home";
-import './index.css';
+import "./index.css";
 import AppRouter from "./page/router";
+import { AuthProvider } from "./context/AuthContext";
 
 export const App = () => {
   return (
-    <AppRouter />
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
   );
-}
+};
 
 export default App;

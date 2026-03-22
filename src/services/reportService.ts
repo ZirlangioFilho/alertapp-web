@@ -1,4 +1,10 @@
-import { collection, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import type { ButtonType } from "../constants/buttons";
 import type { Unsubscribe } from "firebase/firestore";
@@ -17,6 +23,10 @@ export type ReportItem = {
   locationUpdatesActive?: boolean;
   /** Preenchido quando o usuário para o envio de localização (para notificar o policial) */
   locationStoppedAt?: Date | null;
+  /** Quando o policial marcou a ocorrência como concluída no painel (home). */
+  concludedAt?: Date | null;
+  /** Nome do policial logado que concluiu (campo `concludedByOfficerName` no Firestore). */
+  concludedByOfficerName?: string | null;
 };
 
 function parseTimestamp(v: unknown): Date | null {
@@ -45,10 +55,32 @@ export function subscribeReports(
         longitude: data.longitude ?? null,
         locationUpdatesActive: data.locationUpdatesActive === true,
         locationStoppedAt: parseTimestamp(data.locationStoppedAt),
+        concludedAt: parseTimestamp(data.concludedAt),
+        concludedByOfficerName:
+          typeof data.concludedByOfficerName === "string"
+            ? data.concludedByOfficerName.trim() || null
+            : null,
       });
+    });
+    reports.sort((a, b) => {
+      const ta = a.createdAt?.getTime() ?? 0;
+      const tb = b.createdAt?.getTime() ?? 0;
+      return tb - ta;
     });
     callback(reports);
   });
 
   return unsubscribe;
+}
+
+/** Marca o relato como concluído (data/hora + nome do policial no Firestore). Requer regras que permitam update por policial. */
+export async function concludeReport(
+  reportId: string,
+  officerDisplayName: string
+): Promise<void> {
+  const name = officerDisplayName.trim() || "Policial";
+  await updateDoc(doc(db, "data", reportId), {
+    concludedAt: serverTimestamp(),
+    concludedByOfficerName: name,
+  });
 }

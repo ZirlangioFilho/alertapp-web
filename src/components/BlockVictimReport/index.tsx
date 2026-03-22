@@ -1,72 +1,88 @@
-import { useState, useEffect } from "react";
 import { type ButtonType } from "../../constants/buttons";
 import { useRelativeTimeLabel } from "../../hooks/useRelativeTimeLabel";
 
-type BlockVictimProps = {
+type BlockVictimReportProps = {
   onClick: () => void;
   name: string;
   category: ButtonType;
   report: string;
   address: string;
   createdAt?: Date | null;
+  concludedAt?: Date | null;
+  concludedByOfficerName?: string | null;
 };
 
-export const BlockVictimReport = ({ onClick, name, report, address, createdAt }: BlockVictimProps) => {
+function formatConcludedAt(d: Date): string {
+  return d.toLocaleString("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
+
+export const BlockVictimReport = ({
+  onClick,
+  name,
+  category,
+  report,
+  address,
+  createdAt,
+  concludedAt,
+  concludedByOfficerName,
+}: BlockVictimReportProps) => {
   const timeLabel = useRelativeTimeLabel(createdAt);
-  const [check, setCheck] = useState(false);
-
-  const getKey = () => `visto-${name}-${report}-${address}`;
-
-  useEffect(() => {
-    const stored = localStorage.getItem(getKey());
-    if (stored) setCheck(JSON.parse(stored));
-  }, [name, report, address]);
-
-  const switchCheck = () => {
-    const newCheck = !check;
-    setCheck(newCheck);
-    localStorage.setItem(getKey(), JSON.stringify(newCheck));
-  };
 
   return (
     <div
-      className={`w-full max-w-[1080px] flex flex-col md:flex-row border border-[#dce1ea] py-3 px-4 items-stretch md:items-center rounded-xl gap-3 md:text-left text-center min-w-0 bg-white shadow-sm`}
+      className="flex w-full max-w-[1080px] flex-col rounded-xl border border-[#dce1ea] bg-white px-4 py-3 text-center shadow-sm min-w-0 md:flex-row md:items-center md:text-left"
     >
       <button
         type="button"
         onClick={onClick}
-        className="w-full md:w-[88%] border-none flex flex-col md:flex-row gap-3 md:gap-4 cursor-pointer bg-transparent text-left min-w-0 items-start md:items-center"
+        className="flex w-full min-w-0 cursor-pointer flex-col gap-3 border-none bg-transparent text-left md:flex-row md:gap-4"
       >
-        <div className="flex items-center gap-3 min-w-[180px]">
-          <div className="w-8 h-8 rounded-full bg-[#2f6f76] text-white flex items-center justify-center font-bold">i</div>
+        <div className="flex min-w-[180px] items-center gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2f6f76] text-sm font-bold text-white">
+            i
+          </div>
           <div>
-            <p className="text-[#161a23] font-semibold leading-tight">{name}</p>
-            <p className="text-xs text-[#7b8294]" title={createdAt ? createdAt.toLocaleString("pt-BR") : undefined}>
+            <p className="leading-tight font-semibold text-[#161a23]">{name}</p>
+            <p
+              className="text-xs text-[#7b8294]"
+              title={createdAt ? createdAt.toLocaleString("pt-BR") : undefined}
+            >
               {timeLabel}
             </p>
           </div>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] uppercase tracking-wide text-[#8d94a3]">Relato do incidente</p>
-          <p className="text-sm text-[#343b4a] truncate">"{report}"</p>
-          <p className="text-[11px] uppercase tracking-wide text-[#8d94a3] mt-2">Endereço de ocorrência</p>
-          <p className="text-xs text-[#596073] truncate">{address}</p>
+          <p className="text-[11px] uppercase tracking-wide text-[#8d94a3]">Categoria</p>
+          <p className="truncate text-sm text-[#343b4a]">{category}</p>
+          <p className="mt-2 text-[11px] uppercase tracking-wide text-[#8d94a3]">
+            Relato do incidente
+          </p>
+          <p className="truncate text-sm text-[#343b4a]">&quot;{report}&quot;</p>
+          <p className="mt-2 text-[11px] uppercase tracking-wide text-[#8d94a3]">
+            Endereço de ocorrência
+          </p>
+          <p className="truncate text-xs text-[#596073]">{address}</p>
         </div>
+          {concludedAt ? (
+            <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-left flex flex-col items-center justify-center">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-800">
+                Ocorrência concluída
+              </p>
+              <p className="text-sm font-semibold text-emerald-900" title={concludedAt.toISOString()}>
+                {formatConcludedAt(concludedAt)}
+              </p>
+              {concludedByOfficerName ? (
+                <p className="mt-1.5 text-xs text-emerald-800">
+                  <span className="font-medium text-emerald-900/90">Por: </span>
+                  {concludedByOfficerName}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
       </button>
-      <div className="flex md:flex-col gap-2 shrink-0 self-center md:self-auto">
-        <button type="button" className="border-none py-2 px-4 text-white rounded-lg font-semibold text-xs bg-[#2f6f76]">
-          Abrir
-        </button>
-        <button
-          type="button"
-          onClick={switchCheck}
-          className={`border-none py-2 px-4 text-white rounded-lg font-semibold text-xs ${
-            check ? "bg-[#8f9aad]" : "bg-[#38a356]"
-          }`}
-        >
-          {check ? "Marcado" : "Concluir"}
-        </button>
-      </div>
     </div>
   );
 };

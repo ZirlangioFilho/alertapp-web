@@ -4,7 +4,7 @@ import { useRelativeTimeLabel } from "../../hooks/useRelativeTimeLabel";
 type BlockVictimProps = {
   id: string;
   onClick: () => void;
-  onConclude: (id: string) => void;
+  onConclude: (id: string) => void | Promise<void>;
   name: string;
   category: ButtonType;
   report: string;
@@ -47,10 +47,15 @@ export const BlockVictim = ({
     window.open(mapsUrl, "_blank");
   };
 
-  const handleConclude = () => {
+  const handleConclude = async () => {
     const confirmed = window.confirm("Tem certeza?");
     if (!confirmed) return;
-    onConclude(id);
+    try {
+      await Promise.resolve(onConclude(id));
+    } catch (e) {
+      console.error(e);
+      window.alert("Não foi possível concluir o relato.");
+    }
   };
 
   return (

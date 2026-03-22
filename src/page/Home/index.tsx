@@ -2,7 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Menu } from "../../components/Menu";
 import { BlockVictim } from "../../components/BlockVictim";
 import type { ButtonType } from "../../constants/buttons";
-import { subscribeReports, type ReportItem } from "../../services/reportService";
+import {
+  subscribeReports,
+  concludeReport,
+  type ReportItem,
+} from "../../services/reportService";
 import PopUp from "../../components/PopUp";
 import { useOfficerDisplayName } from "../../hooks/useOfficerDisplayName";
 import {
@@ -15,7 +19,6 @@ export const Home = () => {
   const [active, setActive] = useState<ButtonType>("Violência doméstica");
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hiddenReportIds, setHiddenReportIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
@@ -32,30 +35,18 @@ export const Home = () => {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("home-hidden-report-ids");
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        setHiddenReportIds(parsed.filter((v): v is string => typeof v === "string"));
-      }
-    } catch {
-      setHiddenReportIds([]);
-    }
-  }, []);
-
   const filteredReports = useMemo(() => {
     return reports.filter((item) => {
       if (item.category !== active) return false;
-      if (hiddenReportIds.includes(item.id)) return false;
+      /** Na home só aparecem ocorrências ainda não concluídas (concluídas vão ao relatório com data). */
+      if (item.concludedAt) return false;
       if (!matchesCreatedAtFilters(item, searchParsed.day, searchParsed.month, searchParsed.year)) {
         return false;
       }
       if (!matchesTextTokens(item, searchParsed.textTokens)) return false;
       return true;
     });
-  }, [reports, active, hiddenReportIds, searchParsed]);
+  }, [reports, active, searchParsed]);
 
   const openPopUp = (report: ReportItem) => {
     setSelectedReportId(report.id);
@@ -65,13 +56,15 @@ export const Home = () => {
     setSelectedReportId(null);
   };
 
-  const handleConcludeReport = (id: string) => {
-    setHiddenReportIds((prev) => {
-      if (prev.includes(id)) return prev;
-      const next = [...prev, id];
-      localStorage.setItem("home-hidden-report-ids", JSON.stringify(next));
-      return next;
-    });
+  const handleConcludeReport = async (id: string) => {
+    try {
+      await concludeReport(id, officerName);
+    } catch (e) {
+      console.error(e);
+      window.alert(
+        "Não foi possível marcar como concluído. Verifique sua conexão e as regras do Firestore (update em data/{id})."
+      );
+    }
   };
 
   const selectedReport = useMemo(
@@ -80,9 +73,9 @@ export const Home = () => {
   );
 
   return (
-    <section className="w-full min-h-screen flex flex-col md:flex-row overflow-x-hidden bg-[#eef1f6]">
+    <section className="flex h-[100dvh] min-h-0 w-full flex-col overflow-hidden bg-[#eef1f6] md:flex-row">
       <Menu active={active} setActive={setActive} officerName={officerName} />
-      <div className="flex flex-1 flex-col items-center gap-4 overflow-y-auto overflow-x-hidden min-h-0 p-4 md:p-8 w-full">
+      <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-4 overflow-y-auto overflow-x-hidden p-4 md:p-8">
         <div className="w-full max-w-[1080px] flex flex-col gap-2">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="flex items-center bg-white rounded-xl border border-[#d7dce5] px-3 w-full shadow-sm flex-1 min-w-0">
@@ -91,7 +84,7 @@ export const Home = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar: palavras (ex: tratos), dia (15), data 15/03/2026 ou 15 maus tratos"
+                placeholder="Buscar: palavras (ex: socorro)"
                 className="flex-1 min-w-0 py-3 px-0 text-sm md:text-base bg-transparent outline-none"
               />
             </div>
