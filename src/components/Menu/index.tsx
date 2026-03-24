@@ -12,9 +12,12 @@ type MenuProps = {
   setActive: (active: ButtonType) => void;
   /** Nome do policial logado (apenas o nome, sem cargo). */
   officerName?: string;
+  /** Contagem de relatos não lidos na outra categoria (para badge de notificação). */
+  unreadViolencia?: number;
+  unreadRelato?: number;
 }
 
-export const Menu = ({ active, setActive, officerName = "" }: MenuProps) => {
+export const Menu = ({ active, setActive, officerName = "", unreadViolencia = 0, unreadRelato = 0 }: MenuProps) => {
   const [exit, setExit] = useState(true)
 
   const navigate = useNavigate()
@@ -52,18 +55,26 @@ export const Menu = ({ active, setActive, officerName = "" }: MenuProps) => {
           
         </div>
         <div className="flex flex-wrap gap-2">
-          {Buttons.map((button) => (
-            <button
-              key={button}
-              type="button"
-              onClick={() => setActive(button as ButtonType)}
-              className={`border-none text-left bg-transparent text-sm cursor-pointer py-2 px-2 rounded-lg transition-colors ${
-                active === button ? 'font-semibold text-white bg-white/14' : 'text-[#9aa4b2]'
-              }`}
-            >
-              {button}
-            </button>
-          ))}
+          {Buttons.map((button) => {
+            const badge = button === "Violência doméstica" ? unreadViolencia : unreadRelato;
+            return (
+              <button
+                key={button}
+                type="button"
+                onClick={() => setActive(button as ButtonType)}
+                className={`relative border-none text-left bg-transparent text-sm cursor-pointer py-2 px-2 rounded-lg transition-colors ${
+                  active === button ? 'font-semibold text-white bg-white/14' : 'text-[#9aa4b2]'
+                }`}
+              >
+                {button}
+                {badge > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
         <div className="flex justify-end">
           <AnimatePresence mode="wait">
@@ -105,19 +116,27 @@ export const Menu = ({ active, setActive, officerName = "" }: MenuProps) => {
           <img src={Logo} alt="Logo" className="pt-0 w-[110px] h-auto block mb-10" />
           <p className="text-[11px] uppercase tracking-wide text-[#9aa4b2] font-semibold mb-3 px-2">Principal</p>
           <div className="flex flex-col gap-2 items-start">
-            {Buttons.map((button) => (
-              <button
-                key={button}
-                type="button"
-                onClick={() => setActive(button as ButtonType)}
-                className={`border-none text-left bg-transparent text-sm cursor-pointer transition-colors duration-300 w-full px-3 py-3 rounded-lg flex items-center gap-2 ${
-                  active === button ? 'font-semibold text-white bg-white/12 border-l-4 border-[#2f66e4]' : 'font-normal text-[#9aa4b2]'
-                }`}
-              >
-                <span className={active === button ? 'text-[#8eb0ff]' : 'text-[#7f8896]'}>{button === "Relato de problemas" ? "▣" : "△"}</span>
-                {button}
-              </button>
-            ))}
+            {Buttons.map((button) => {
+              const badge = button === "Violência doméstica" ? unreadViolencia : unreadRelato;
+              return (
+                <button
+                  key={button}
+                  type="button"
+                  onClick={() => setActive(button as ButtonType)}
+                  className={`relative border-none text-left bg-transparent text-sm cursor-pointer transition-colors duration-300 w-full px-3 py-3 rounded-lg flex items-center gap-2 ${
+                    active === button ? 'font-semibold text-white bg-white/12 border-l-4 border-[#2f66e4]' : 'font-normal text-[#9aa4b2]'
+                  }`}
+                >
+                  <span className={active === button ? 'text-[#8eb0ff]' : 'text-[#7f8896]'}>{button === "Relato de problemas" ? "▣" : "△"}</span>
+                  {button}
+                  {badge > 0 && (
+                    <span className="ml-auto min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold px-1.5">
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
             <button
               type="button"
               onClick={handleReport}

@@ -20,6 +20,8 @@ export const Home = () => {
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [seenViolenciaIds, setSeenViolenciaIds] = useState<Set<string>>(new Set());
+  const [seenRelatoIds, setSeenRelatoIds] = useState<Set<string>>(new Set());
 
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const officerName = useOfficerDisplayName();
@@ -35,6 +37,30 @@ export const Home = () => {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (active === "Violência doméstica") {
+      const ids = reports
+        .filter((r) => r.category === "Violência doméstica")
+        .map((r) => r.id);
+      if (ids.length === 0) return;
+      setSeenViolenciaIds((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.add(id));
+        return next;
+      });
+      return;
+    }
+    const ids = reports
+      .filter((r) => r.category === "Relato de problemas")
+      .map((r) => r.id);
+    if (ids.length === 0) return;
+    setSeenRelatoIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      return next;
+    });
+  }, [active, reports]);
+
   const filteredReports = useMemo(() => {
     return reports.filter((item) => {
       if (item.category !== active) return false;
@@ -48,6 +74,25 @@ export const Home = () => {
     });
   }, [reports, active, searchParsed]);
 
+  const { unreadViolencia, unreadRelato } = useMemo(() => {
+    const violencia = reports.filter(
+      (r) =>
+        r.category === "Violência doméstica" &&
+        !r.concludedAt &&
+        !seenViolenciaIds.has(r.id)
+    ).length;
+    const relato = reports.filter(
+      (r) =>
+        r.category === "Relato de problemas" &&
+        !r.concludedAt &&
+        !seenRelatoIds.has(r.id)
+    ).length;
+    return {
+      unreadViolencia: active === "Relato de problemas" ? violencia : 0,
+      unreadRelato: active === "Violência doméstica" ? relato : 0,
+    };
+  }, [reports, active, seenRelatoIds, seenViolenciaIds]);
+
   const openPopUp = (report: ReportItem) => {
     setSelectedReportId(report.id);
   };
@@ -57,9 +102,29 @@ export const Home = () => {
   };
 
   const handleConcludeReport = async (id: string) => {
+    // Otimista: remove imediatamente da Home.
+    setReports((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              concludedAt: new Date(),
+              concludedByOfficerName: officerName || "Policial",
+            }
+          : item
+      )
+    );
     try {
       await concludeReport(id, officerName);
     } catch (e) {
+      // Reverte em caso de erro.
+      setReports((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? { ...item, concludedAt: null, concludedByOfficerName: null }
+            : item
+        )
+      );
       console.error(e);
       window.alert(
         "Não foi possível marcar como concluído. Verifique sua conexão e as regras do Firestore (update em data/{id})."
@@ -74,7 +139,13 @@ export const Home = () => {
 
   return (
     <section className="flex h-[100dvh] min-h-0 w-full flex-col overflow-hidden bg-[#eef1f6] md:flex-row">
-      <Menu active={active} setActive={setActive} officerName={officerName} />
+      <Menu
+        active={active}
+        setActive={setActive}
+        officerName={officerName}
+        unreadViolencia={unreadViolencia}
+        unreadRelato={unreadRelato}
+      />
       <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-4 overflow-y-auto overflow-x-hidden p-4 md:p-8">
         <div className="w-full max-w-[1080px] flex flex-col gap-2">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
